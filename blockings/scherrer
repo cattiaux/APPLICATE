@@ -1,0 +1,98 @@
+#!/bin/bash
+
+#############################################################
+
+# Args
+if test $# -lt 2 ; then
+  echo " "; echo "Syntax: $0 [ifile] [odir]" ; echo " " ; exit
+fi
+
+ifile=`readlink -m $1`
+odir=`readlink -m $2`
+
+if [ ! -f $ifile ] ; then echo "no input file, stop." ; exit ; fi
+mkdir -p $odir
+
+#############################################################
+
+# Parameters for blocking computation (see Scherrer et al. 2006)
+lat0=35,75      # range of central latitudes
+dlat=15         # delta lat to compute gradients
+latN=49,90      # range of northern latitudes = central latitudes + dlat (adjusted to have same nb grid pts)
+latS=20,60      # range of southern latitudes = central latitudes - dlat (adjusted to have same nb grid pts)
+critN="ltc,-10" # criterion for the northern gradient (latN/lat0)
+critS="gtc,0"   # criterion for the southern gradient (lat0/latS)
+
+#############################################################
+
+# Working in temporary directory
+mkdir -p "./tmp"
+cd tmp
+rm -f tmp*
+
+#############################################################
+# GETTING INPUT FILE
+# >> $odir/ori.nc
+#############################################################
+
+echo " "
+echo "*****************************"
+echo "Getting input file .."
+echo "*****************************"
+
+orifile="$odir/ori.nc"
+if [ -f $orifile ] ; then echo "done already"
+else
+
+  echo ""
+  echo "Linking from $ifile .."
+  ln -sf $ifile $orifile
+
+fi
+
+#############################################################
+# COMPUTING BLOCKINGS
+# >> $odir/index.nc    = flag 1/0 if longitude is blocked or not
+# >> $odir/strength.nc = intensity of the block
+#############################################################
+
+echo " "
+echo "*****************************"
+echo "Computing blockings .."
+echo "*****************************"
+
+ofile1="$odir/index.nc"
+ofile2="$odir/strength.nc"
+if [ -f $ofile1 ] & [ -f $ofile2 ] ; then echo "done already"
+else
+
+echo ".. (extracting lats..)"
+cdo sellonlatbox,-180,180,$lat0 $ifile tmp_0
+cdo sellonlatbox,-180,180,$latN $ifile tmp ; cdo setgrid,tmp_0 tmp tmp_N ; rm -f tmp
+cdo sellonlatbox,-180,180,$latS $ifile tmp ; cdo setgrid,tmp_0 tmp tmp_S ; rm -f tmp
+
+echo ".. (computing gradients..)"
+cdo sub tmp_N tmp_0 tmp ; cdo divc,$dlat tmp tmp_GN ; rm -f tmp
+cdo sub tmp_0 tmp_S tmp ; cdo divc,$dlat tmp tmp_GS ; rm -f tmp
+
+echo ".. (verifying criteria..)"
+cdo $critN tmp_GN tmp_BN
+cdo $critS tmp_GS tmp_BS
+cdo ensmin tmp_BN tmp_BS $ofile1
+cdo ifthen $ofile1 tmp_GS $ofile2
+    
+echo ".. (cleaning..)"
+rm -f tmp* 
+
+fi
+
+#############################################################
+#############################################################
+echo ""
+echo "*****************************"
+echo "THE END."
+echo "*****************************"
+
+cd ..
+rm -rf tmp
+

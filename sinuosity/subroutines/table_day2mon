@@ -1,0 +1,21 @@
+#!/bin/bash
+
+if test $# -lt 2 ; then
+  echo "" ; echo "Syntax: $0 [ifile] [ofile]" ; echo "" ; exit
+fi
+
+ifile=$1
+ofile=$2
+
+if [ ! -f $ifile ] ; then echo "input file can not be found" ; exit ; fi
+
+rm -f "in.d2m.txt"
+
+ln -s $ifile "in.d2m.txt"
+
+Rscript ./$0.R
+
+mv "out.d2m.txt" $ofile
+
+rm -f "in.d2m.txt"
+

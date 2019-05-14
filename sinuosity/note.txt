@@ -1,0 +1,57 @@
+-----------------------------------------------------------------------------------------
+This directory contains scripts used for the computation of the sinuosity index
+introduced in Cattiaux et al. (GRL 2016).
+-----------------------------------------------------------------------------------------
+Last edit: oct 2018
+-----------------------------------------------------------------------------------------
+
+*sinuosity* is the main script and uses routines from the subroutines/ folder.
+
+--
+Arguments are:
+  - ifile = the path of the input daily file (usually zg500)
+  - odir  = the path of the output folder
+
+WARNING: latitudes in ifile must be in ascending order! (not checked by the program)
+
+--
+Example:
+  > cd /cnrm/amacs/USERS/cattiaux/APPLICATE/TOOLS/scripts/sinuosity
+  > ./sinuosity ../../example_data/day/zg500_day_raw.nc ../../example_output/sinuosity
+
+--
+This script will produce several files in the output folder:
+  - ori.nc              = a link to the original input file (nlon x nlat x ntime)
+  - iso.nc              = the value of the iso-contour used (1 x 1 x ntime)
+  - cont-stat_*.txt     = daily contour statistics (see below) (ntime x nstat)
+  - cont-flag_*.nc      = daily contour flag (1 or 0) (nlon x nlat x ntime)
+  - cont-mon-stat_*.txt = monthly averages of daily stats
+  - cont-mon-flag_*.nc  = monthly averages of daily flags
+  - cont-clim-flag_*.nc = monthly climatology of daily flags
+
+--
+In the current version of *sinuosity*:
+  - For each day, the value of the iso-contour (iso.nc) is taken as the field average of the input
+    variable over 0-360, 30-70N (stored in iso.nc.ori), and then smoothed by loess over time
+    (see the subroutines/ folder).
+  - Sinuosity is computed over 5 domains: the whole NH, and 4 quarters (AT, AS, PA, AM), as done
+    in the original paper.
+
+--
+In the current version of subroutines/contour_analysis.R:
+  - The list of returned statistics, short names and default values is:
+    "total contour length"   ,"cltot" ,  0,
+    "first contour length"   ,"cl1"   ,  0,
+    "max contour length"     ,"clmax" ,  0,
+    "min contour length"     ,"clmin" ,  0,
+    "number of contours"     ,"nc"    ,  0,
+    "maximal latitude"       ,"latmax", NA,
+    "minimal latitude"       ,"latmin", NA,
+    "mean latitude"          ,"latavg", NA,
+    "median latitude"        ,"latmed", NA,
+    "amplitude of latitudes" ,"latamp", NA,
+    "std dev of latitudes"   ,"latstd", NA
+  - To compute the sinuosity index, one must divide the total contour length (cltot) by the length
+    of the "straight line", ie. the Earth circle (or quarter-circle for subdomains) located at the
+    mean latitude (latavg). latavg was considered to be constant at 50°N in the original paper.
+

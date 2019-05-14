@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if test $# -lt 4 ; then
+  echo "" ; echo "Syntax: $0 -d [nb equiv deg of freedom] [ifile] [ofile]" ; echo "" ; exit
+fi
+
+if [ ! $1 = "-d" ] ; then echo "$1 : unknown option" ; exit ; fi
+dof=$2
+ifile=$3
+ofile=$4
+
+if [ ! -f $ifile ] ; then echo "input file can not be found" ; exit ; fi
+
+rm -f "in.ss.var.nc" "in.ss.par.txt"
+
+ln -s $ifile "in.ss.var.nc"
+echo ${dof} > "in.ss.par.txt"
+
+Rscript ./$0.R
+
+mv "out.ss.nc" $ofile
+
+rm -f "in.ss.var.nc" "in.ss.par.txt"
+

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if test $# -lt 4 ; then
+  echo "" ; echo "Syntax: $0 -d [equiv nb of time steps] [ifile] [ofile]" ; echo "" ; exit
+fi
+
+if [ ! $1 = "-d" ] ; then echo "$1 : unknown option" ; exit ; fi
+df=$2
+ifile=$3
+ofile=$4
+
+if [ ! -f $ifile ] ; then echo "input file can not be found" ; exit ; fi
+
+rm -f "in.sl.var.nc" "in.sl.par.txt"
+
+ln -s $ifile "in.sl.var.nc"
+echo ${df} > "in.sl.par.txt"
+
+Rscript ./$0.R
+
+mv "out.sl.nc" $ofile
+
+rm -f "in.sl.var.nc" "in.sl.par.txt"
+

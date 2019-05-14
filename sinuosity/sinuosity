@@ -1,0 +1,190 @@
+#!/bin/bash
+
+#############################################################
+
+# Args
+if test $# -lt 2 ; then
+  echo " "; echo "Syntax: $0 [ifile] [odir]" ; echo " " ; exit
+fi
+
+ifile=`readlink -m $1`
+odir=`readlink -m $2`
+
+if [ ! -f $ifile ] ; then echo "no input file, stop." ; exit ; fi
+mkdir -p $odir
+
+#############################################################
+
+# Parameters for iso-contour computation
+#ISONDF=100                  # Number of df used for spline-smoothing
+ISOLSP=100                  # Loess smoothing parameter (equiv nb of time steps)
+SMOOTH="loess"              # Smoothing method (loess or splines, cf. names of R subroutines)
+ISOLAT="30,70"              # Latitudinal band used for averaging
+
+# Domains to consider with associated lon/lat
+# (monthly flags for first domain only)
+DOMAINS="NH AT AS PA AM"
+DOMLONS="-180,180 -50,40 40,130 130,220 -140,-50"
+DOMLATS="0,90 0,90 0,90 0,90 0,90"
+
+#############################################################
+
+# Working in temporary directory
+mkdir -p "./tmp"
+cd tmp
+rm -f tmp*
+
+# Relative path of subroutines
+RDIR="../subroutines"
+
+#############################################################
+# GETTING INPUT FILE
+# >> $odir/ori.nc
+#############################################################
+
+echo " "
+echo "*****************************"
+echo "Getting input file .."
+echo "*****************************"
+
+orifile="$odir/ori.nc"
+if [ -f $orifile ] ; then echo "done already"
+else
+
+  echo ""
+  echo "Linking from $ifile .."
+  echo "WARNING: latitudes must be in ascending order!"
+  ln -sf $ifile $orifile
+
+fi
+
+#############################################################
+# COMPUTING ISO-CONTOUR VALUES FILES
+# >> $odir/iso.nc [+ iso.nc.ori = iso-contour before smoothing]
+#############################################################
+
+echo " "
+echo "*****************************"
+echo "Computing iso-contour values .."
+echo "*****************************"
+
+isofile="$odir/iso.nc"
+if [ -f $isofile ] ; then echo "done already"
+else
+
+  echo ""
+  echo "Computing raw value .."		    
+  cdo sellonlatbox,-180,180,$ISOLAT $orifile tmp_iso
+  cdo fldmean tmp_iso $isofile.ori
+  rm -f tmp_iso
+
+  echo ""
+  echo "Smoothing by ${SMOOTH}.."
+  if [ "$SMOOTH" = "splines" ] ; then par=$ISONDF ; fi
+  if [ "$SMOOTH" = "loess" ]   ; then par=$ISOLSP ; fi
+
+  cp $RDIR/smooth_${SMOOTH}* .
+  ./smooth_$SMOOTH -d $par $isofile.ori $isofile
+
+fi
+
+#############################################################
+# COMPUTING CONTOUR ANALYSIS
+# >> $odir/cont-stat* and $odir/cont-flag*
+#############################################################
+NDOM=`echo $DOMAINS | wc -w`
+
+echo ""
+echo "*****************************"
+echo "Computing contour analysis .."
+echo "*****************************"
+
+for ID in `seq 1 $NDOM` ; do
+
+  DOM=`echo $DOMAINS | cut -d' ' -f$ID`
+  LON=`echo $DOMLONS | cut -d' ' -f$ID`
+  LAT=`echo $DOMLATS | cut -d' ' -f$ID`
+
+  statfile="$odir/cont-stat_${DOM}.txt"
+  flagfile="$odir/cont-flag_${DOM}.nc"
+  if [ -f $statfile ] & [ -f $flagfile ] ; then echo "$DOM: done already" ; continue ; fi
+
+  echo ""
+  echo "Extracting domain $DOM.."
+  cdo sellonlatbox,$LON,$LAT $orifile tmp_var.nc
+
+  echo ""
+  echo "Getting isocontour value.."
+  ln -s $isofile tmp_iso.nc
+
+  echo ""
+  echo "Running contour analysis.."
+  cp $RDIR/contour_analysis* .
+  ./contour_analysis tmp_var.nc tmp_iso.nc $statfile $flagfile
+
+  rm -f tmp_*
+
+done
+
+#############################################################
+# COMPUTING MONTHLY AVERAGES FOR STATS
+# >> $odir/cont-mon-stat*
+#############################################################
+
+for DOM in $DOMAINS ; do
+
+  echo ""
+  echo "*****************************"
+  echo "Computing monthly-mean stats for domain $DOM .."
+  echo "*****************************"
+
+  dfile="$odir/cont-stat_$DOM.txt"
+  mfile="$odir/cont-mon-stat_$DOM.txt"
+  if [ -f $mfile ] ; then echo "done already" ; continue ; fi
+
+  cp $RDIR/table_day2mon* .
+  ./table_day2mon $dfile $mfile
+
+done
+
+#############################################################
+# COMPUTING MONTHLY AVERAGES + CLIM FOR FLAGS
+# (only first domain) (NH in general)
+# >> $odir/cont-mon-flag* and $odir/cont-clim-flag*
+#############################################################
+
+DOM=`echo $DOMAINS | cut -d' ' -f1`
+dfile="$odir/cont-flag_$DOM.nc"
+
+echo ""
+echo "*****************************"
+echo "Computing monthly-mean flags for domain $DOM .."
+echo "*****************************"
+
+mfile="$odir/cont-mon-flag_${DOM}.nc"
+if [ -f $mfile ] ; then echo "done already"
+else 
+  cdo monmean $dfile $mfile
+fi
+
+echo ""
+echo "*****************************"
+echo "Computing monthly clim of flags for domain $DOM .."
+echo "*****************************"
+
+cfile="$odir/cont-clim-flag_${DOM}.nc"
+if [ -f $cfile ] ; then echo "done already"
+else
+  cdo ymonmean $mfile $cfile
+fi
+
+
+#############################################################
+#############################################################
+echo ""
+echo "*****************************"
+echo "THE END."
+echo "*****************************"
+
+cd ..
+rm -rf tmp

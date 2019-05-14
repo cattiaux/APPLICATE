@@ -1,0 +1,119 @@
+#!/bin/bash
+
+#############################################################
+
+# Args
+if test $# -lt 2 ; then
+  echo " "; echo "Syntax: $0 [ifile] [odir]" ; echo " " ; exit
+fi
+
+ifile=`readlink -m $1`
+odir=`readlink -m $2`
+
+if [ ! -f $ifile ] ; then echo "no input file, stop." ; exit ; fi
+mkdir -p $odir
+
+#############################################################
+
+# Parameters for blocking computation (see Tibaldi & Molteni 1990)
+latN=80         # northern latitude
+lat0=60         # central latitude
+latS=40         # southern latitude
+critN="ltc,-10" # criterion for the northern gradient (latN/lat0)
+critS="gtc,0"   # criterion for the southern gradient (lat0/laaS)
+delta="-5 0 5"  # tolerance around requested latitudes for verifying criteria
+DLAT=1          # tolerance for selecting latitudes; depends on grid, should be ceiling(delta(lat)/2)
+
+#############################################################
+
+# Working in temporary directory
+mkdir -p "./tmp"
+cd tmp
+rm -f tmp*
+
+#############################################################
+# GETTING INPUT FILE
+# >> $odir/ori.nc
+#############################################################
+
+echo " "
+echo "*****************************"
+echo "Getting input file .."
+echo "*****************************"
+
+orifile="$odir/ori.nc"
+if [ -f $orifile ] ; then echo "done already"
+else
+
+  echo ""
+  echo "Linking from $ifile .."
+  ln -sf $ifile $orifile
+
+fi
+
+#############################################################
+# COMPUTING BLOCKINGS
+# >> $odir/index.nc    = flag 1/0 if longitude is blocked or not
+# >> $odir/strength.nc = intensity of the block
+#############################################################
+
+echo " "
+echo "*****************************"
+echo "Computing blockings .."
+echo "*****************************"
+
+ofile1="$odir/index.nc"
+ofile2="$odir/strength.nc"
+if [ -f $ofile1 ] & [ -f $ofile2 ] ; then echo "done already"
+else
+
+  NDELTA=`echo $delta | wc -w`
+  for i in `seq 1 $NDELTA`; do
+
+    d=`echo $delta | cut -d' ' -f${i}`
+
+    lN=$((latN + d)); l0=$((lat0 + d)); lS=$((latS+d))
+
+    echo ""
+    echo ".. Searching for blockings at latitudes $lN $l0 and $lS"
+
+    echo ".. (extracting lats..)"
+    cdo sellonlatbox,-180,180,$((lN - DLAT)),$((lN + DLAT)) $ifile tmp_N0 ; cdo mermean tmp_N0 tmp_N
+    cdo sellonlatbox,-180,180,$((l0 - DLAT)),$((l0 + DLAT)) $ifile tmp_00 ; cdo mermean tmp_00 tmp_0
+    cdo sellonlatbox,-180,180,$((lS - DLAT)),$((lS + DLAT)) $ifile tmp_S0 ; cdo mermean tmp_S0 tmp_S
+
+    echo ".. (computing gradients..)"
+    cdo sub tmp_N tmp_0 tmp ; cdo divc,$((lN - l0)) tmp tmp_GN
+    cdo sub tmp_0 tmp_S tmp ; cdo divc,$((l0 - lS)) tmp tmp_GS
+
+    echo ".. (verifying criteria..)"
+    cdo $critN tmp_GN tmp_BN
+    cdo $critS tmp_GS tmp_BS
+    cdo ensmin tmp_BN tmp_BS $ofile1.delta$i
+    cdo ifthen $ofile1.delta$i tmp_GS $ofile2.delta$i
+    
+    echo ".. (cleaning..)"
+    rm -f tmp* 
+
+  done
+
+  echo ""
+  echo ".. Merging blocking information and writing output files"
+  cdo ensmax $ofile1.delta* $ofile1
+  cdo ensmax $ofile2.delta* $ofile2
+
+  echo ">> Done."
+  rm -f $ofile1.delta* $ofile2.delta*
+
+fi
+
+#############################################################
+#############################################################
+echo ""
+echo "*****************************"
+echo "THE END."
+echo "*****************************"
+
+cd ..
+rm -rf tmp
+

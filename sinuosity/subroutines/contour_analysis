@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if test $# -lt 4 ; then
+  echo "" ; echo "Syntax: $0 [ifile_var] [ifile_iso] [ofile_stat] [ofile_flag]" ; echo "" ; exit
+fi
+
+ifile1=$1
+ifile2=$2
+ofile1=$3
+ofile2=$4
+
+if [ ! -f $ifile1 ] ; then echo "input var file (1) can not be found" ; exit ; fi
+if [ ! -f $ifile2 ] ; then echo "input iso file (2) can not be found" ; exit ; fi
+
+rm -f "in.ca.var.nc" "in.ca.iso.nc"
+
+ln -s $ifile1 "in.ca.var.nc"
+ln -s $ifile2 "in.ca.iso.nc"
+
+Rscript ./$0.R
+
+mv "out.ca.stats.txt" $ofile1
+mv "out.ca.flag.nc"   $ofile2
+
+rm -f "in.ca.var.nc" "in.ca.iso.nc"
+

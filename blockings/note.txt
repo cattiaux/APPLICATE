@@ -1,0 +1,41 @@
+-----------------------------------------------------------------------------------------
+This directory contains scripts used for the computation of various blockings
+indices
+-----------------------------------------------------------------------------------------
+Last edit: oct 2018
+-----------------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------------------
+*tm_index* computes a 1d blocking index following Tibaldi and Molteni (1990)
+
+--
+Arguments are:
+  - ifile = the path of the input daily file (usually zg500)
+  - odir  = the path of the output folder
+
+--
+Example:
+  > cd /cnrm/amacs/USERS/cattiaux/APPLICATE/TOOLS/scripts/blockings
+  > ./tm_index ../../example_data/day/zg500_day_raw.nc ../../example_output/tm_index
+
+--
+This script will produce several files in the output folder:
+  - ori.nc        = a link to the original input file (nlon x nlat x ntime)
+  - index.nc      = the resulting index file (flags 1/0) (nlon x 1 x ntime)
+  - strength.nc   = the resulting strength file (amplitude of southern gradients) (nlon x 1 x ntime)
+
+--
+In the current version of *tm_index*:
+  - All values (altitudes, thresholds) are the original values from T&M90.
+  - No running mean is applied before computing the index.
+
+-----------------------------------------------------------------------------------------
+
+
+-----------------------------------------------------------------------------------------
+*scherrer* computes the 2d blocking index following Scherrer et al. (2006) as
+a generalization of the Tibaldi-Molteni index.
+
+--
+Details are similar to tm_index
+-----------------------------------------------------------------------------------------
