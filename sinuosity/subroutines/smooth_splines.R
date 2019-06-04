@@ -37,7 +37,7 @@ if (ndim==3) smooth.dat=aperm(apply(dat$var,1:2,mysmoothy,df=dof),c(2,3,1))
 #   - out.ss.nc, same as in.ss.var.nc but with smoothed values
 #------------------------------------------------------------------------------------------
 print("Writing ouput file..")
-mync("out.ss.nc",smooth.dat,dat$varname,dat$lon,dat$lonu,dat$lat,dat$latu,dat$time,dat$timeu)
+mync("out.ss.nc",smooth.dat,dat$varname,dat$lon,dat$lonu,dat$lat,dat$latu,dat$time,dat$timeu,dat$caltype)
 
 #------------------------------------------------------------------------------------------
 # End of script
