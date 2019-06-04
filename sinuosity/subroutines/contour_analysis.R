@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------------------
 
 # Script with base routines (netcdf, time/date, etc.)
-source("/cnrm/amacs/USERS/cattiaux/APPLICATE/TOOLS/common/R/rbase.R")
+source("../../rbase.R")
 
 # Additional package with geographic tools (spherical distance/perimeter, etc.)
 library(geosphere)
