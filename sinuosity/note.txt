@@ -2,7 +2,7 @@
 This directory contains scripts used for the computation of the sinuosity index
 introduced in Cattiaux et al. (GRL 2016).
 -----------------------------------------------------------------------------------------
-Last edit: oct 2018
+Last edit: june 2019
 -----------------------------------------------------------------------------------------
 
 *sinuosity* is the main script and uses routines from the subroutines/ folder.
@@ -12,7 +12,8 @@ Arguments are:
   - ifile = the path of the input daily file (usually zg500)
   - odir  = the path of the output folder
 
-WARNING: latitudes in ifile must be in ascending order! (not checked by the program)
+WARNING #1: latitudes in ifile must be in ascending order! (not checked by the program)
+WARNING #2: calendar type in ifile must be "standard", "leap", "noleap" or "360_day"! (not checked by the program either)
 
 --
 Example:
