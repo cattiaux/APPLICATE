@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------------------
 
 # Script with base routines (netcdf, splines, etc.)
-source("/cnrm/amacs/USERS/cattiaux/APPLICATE/TOOLS/common/R/rbase.R")
+source("../../rbase.R")
 
 #------------------------------------------------------------------------------------------
 # Getting input files:
